@@ -1,27 +1,92 @@
 import asyncio
+import logging
 import os
-from dotenv import load_dotenv
+
+from aiohttp import web
 from aiogram import Bot, Dispatcher
+from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
+from dotenv import load_dotenv
 
 from shartash_telegram_bot.handlers import router
 
 load_dotenv()
 
-TOKEN = os.getenv("BOT_TOKEN")
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
-async def main():
+def require_env(name: str) -> str:
+    value = os.getenv(name)
+    if not value:
+        raise RuntimeError(f"Environment variable {name} is required")
+    return value
 
-    bot = Bot(token=TOKEN)
 
+def is_truthy(value: str | None) -> bool:
+    if value is None:
+        return False
+    return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def normalize_webhook_path(path: str | None) -> str:
+    if not path:
+        return "/webhook"
+    return path if path.startswith("/") else f"/{path}"
+
+
+def build_dispatcher() -> Dispatcher:
     dp = Dispatcher()
-
     dp.include_router(router)
+    return dp
 
-    print("Bot started")
 
+async def run_polling() -> None:
+    token = require_env("BOT_TOKEN")
+    bot = Bot(token=token)
+    dp = build_dispatcher()
+
+    logger.info("Starting bot in polling mode")
+    await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot)
 
 
+def run_webhook() -> None:
+    token = require_env("BOT_TOKEN")
+    domain = require_env("BOT_WEBHOOK_DOMAIN").rstrip("/")
+    path = normalize_webhook_path(os.getenv("BOT_WEBHOOK_PATH"))
+    port = int(os.getenv("PORT", "8080"))
+
+    bot = Bot(token=token)
+    dp = build_dispatcher()
+    app = web.Application()
+    webhook_url = f"{domain}{path}"
+
+    async def on_startup(bot: Bot) -> None:
+        logger.info("Setting Telegram webhook to %s", webhook_url)
+        await bot.set_webhook(webhook_url)
+
+    async def on_shutdown(bot: Bot) -> None:
+        logger.info("Deleting Telegram webhook")
+        await bot.delete_webhook()
+        await bot.session.close()
+
+    dp.startup.register(on_startup)
+    dp.shutdown.register(on_shutdown)
+
+    SimpleRequestHandler(dispatcher=dp, bot=bot).register(app, path=path)
+    setup_application(app, dp, bot=bot)
+
+    logger.info("Starting bot in webhook mode on 0.0.0.0:%s%s", port, path)
+    web.run_app(app, host="0.0.0.0", port=port)
+
+
+def run() -> None:
+    if is_truthy(os.getenv("BOT_WEBHOOK_ENABLE")):
+        run_webhook()
+        return
+
+    asyncio.run(run_polling())
+
+
 if __name__ == "__main__":
-    asyncio.run(main())
+    run()

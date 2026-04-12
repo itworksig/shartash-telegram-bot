@@ -12,6 +12,9 @@ dependencies = [
     "python-dotenv (>=1.2.2,<2.0.0)"
 ]
 
+[project.scripts]
+shartash-bot = "shartash_telegram_bot.main:run"
+
 [tool.poetry]
 packages = [{include = "shartash_telegram_bot", from = "src"}]
 

@@ -2,6 +2,108 @@
 
 Telegram-бот на `aiogram 3`, который знакомит пользователя с проектом школы тропостроения и показывает информацию по кнопкам.
 
+## Railway 部署
+
+这个项目已经改成可直接部署到 Railway，并支持两种启动模式：
+
+- `polling`：只需要 `BOT_TOKEN`，适合 Railway Worker 或本地运行。
+- `webhook`：适合 Railway Web Service，会监听 `PORT`，并自动向 Telegram 注册 webhook。
+
+如果你现在是在 Railway 普通服务里部署，建议直接用 `webhook` 模式，因为你已经配置了：
+
+- `BOT_WEBHOOK_DOMAIN`
+- `BOT_WEBHOOK_ENABLE`
+- `BOT_WEBHOOK_PATH`
+- `PORT`
+
+### Railway 要填的命令
+
+你截图里的 `npm run build` 和 `npm start` 是错的，这个项目是 Python，不是 Node.js。
+
+把 Railway 里的命令改成下面这样：
+
+`Pre-deploy Command`
+
+```bash
+poetry install --only main
+```
+
+`Custom Start Command`
+
+```bash
+poetry run shartash-bot
+```
+
+如果 Railway 环境里没有 `poetry`，也可以用：
+
+```bash
+python -m shartash_telegram_bot.main
+```
+
+但优先推荐：
+
+```bash
+poetry run shartash-bot
+```
+
+### Railway 必填环境变量
+
+最少需要：
+
+```env
+BOT_TOKEN=你的_telegram_bot_token
+```
+
+如果使用 webhook 模式，再配置：
+
+```env
+BOT_WEBHOOK_ENABLE=true
+BOT_WEBHOOK_DOMAIN=https://你的Railway域名
+BOT_WEBHOOK_PATH=/webhook
+PORT=8080
+```
+
+例如：
+
+```env
+BOT_TOKEN=1234567890:AAExampleRealTelegramToken
+BOT_WEBHOOK_ENABLE=true
+BOT_WEBHOOK_DOMAIN=https://your-app.up.railway.app
+BOT_WEBHOOK_PATH=/webhook
+PORT=8080
+```
+
+最终 webhook 地址会是：
+
+```text
+https://your-app.up.railway.app/webhook
+```
+
+### 你截图里的变量说明
+
+- `BOT_TOKEN`：必须保留，这是 Telegram BotFather 给你的真实 token。
+- `BOT_WEBHOOK_ENABLE`：如果填 `true`，程序会以 webhook 模式启动。
+- `BOT_WEBHOOK_DOMAIN`：必须是 Railway 分配给你的公网 HTTPS 域名，比如 `https://xxx.up.railway.app`。
+- `BOT_WEBHOOK_PATH`：可保留 `/webhook`。
+- `PORT`：Railway 注入的端口，通常无需手动乱改，程序会读取。
+- `BOT_STORE`、`REDIS_URL`、`TZ`、`NODE_ENV`：当前代码里并不依赖它们，不会影响启动。
+
+### 本地启动命令
+
+本地 `.env` 示例：
+
+```env
+BOT_TOKEN=你的_telegram_bot_token
+BOT_WEBHOOK_ENABLE=false
+```
+
+启动：
+
+```bash
+poetry install
+poetry run shartash-bot
+```
+
 ## 1. Назначение проекта
 
 Бот реализует простой сценарий диалога:
@@ -116,18 +218,19 @@ BOT_TOKEN=ваш_токен_бота
 ### 5.4 Команда запуска (текущий стандарт проекта)
 
 ```bash
-PYTHONPATH=src poetry run python -m shartash_telegram_bot.main
+poetry run shartash-bot
 ```
 
-Почему нужен `PYTHONPATH=src`:
+Альтернативно:
 
-- Код пакета лежит в `src/shartash_telegram_bot`;
-- так Python корректно находит пакет при запуске модуля.
+```bash
+poetry run python -m shartash_telegram_bot.main
+```
 
 После старта в консоли будет:
 
 ```text
-Bot started
+INFO:__main__:Starting bot in polling mode
 ```
 
 ## 6. Подробный разбор файлов: что и где менять
@@ -244,7 +347,7 @@ async def contacts_handler(message: Message):
 Проверить, что запуск идет именно так:
 
 ```bash
-PYTHONPATH=src poetry run python -m shartash_telegram_bot.main
+poetry run shartash-bot
 ```
 
 ## 9. Идеи для дальнейшего развития
