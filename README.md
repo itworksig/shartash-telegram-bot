@@ -23,6 +23,7 @@
 
 ```text
 .
+├── main.py
 ├── pyproject.toml
 ├── poetry.lock
 ├── README.md
@@ -58,13 +59,13 @@ BOT_WEBHOOK_ENABLE=false
 Основная команда:
 
 ```bash
-poetry run shartash-bot
+poetry run python main.py
 ```
 
 Альтернативная команда:
 
 ```bash
-poetry run python -m shartash_telegram_bot.main
+poetry run shartash-bot
 ```
 
 После запуска в логах должно появиться:
@@ -130,7 +131,7 @@ poetry install --only main
 `Custom Start Command`
 
 ```bash
-poetry run shartash-bot
+poetry run python main.py
 ```
 
 ### Какие переменные добавить
@@ -196,10 +197,17 @@ npm start
 
 Файл:
 
+[main.py](/Users/yxxiao/Documents/GitHub/New/shartash-telegram-bot/main.py)
+
+Это совместимый стартовый файл для Railway и других окружений, где `src/` не добавляется в `PYTHONPATH` автоматически.
+
+Файл:
+
 [src/shartash_telegram_bot/main.py](/Users/yxxiao/Documents/GitHub/New/shartash-telegram-bot/src/shartash_telegram_bot/main.py)
 
 Здесь происходит:
 
+- выбор и запуск совместимого корневого entrypoint;
 - загрузка переменных окружения;
 - выбор режима `polling` или `webhook`;
 - запуск `Dispatcher`;
@@ -240,6 +248,7 @@ async def contacts_handler(message: Message):
 - задан ли `BOT_TOKEN`;
 - установлен ли Poetry;
 - выполнена ли команда `poetry install`.
+- для Railway и других окружений без `PYTHONPATH=src` используйте `poetry run python main.py`.
 
 ### Ошибка `Token is invalid` или `Unauthorized`
 
@@ -271,12 +280,12 @@ async def contacts_handler(message: Message):
 Локально:
 
 ```bash
-poetry run shartash-bot
+poetry run python main.py
 ```
 
 Railway:
 
 ```bash
 poetry install --only main
-poetry run shartash-bot
+poetry run python main.py
 ```
