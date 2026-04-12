@@ -61,6 +61,28 @@ def run_webhook() -> None:
     app = web.Application()
     webhook_url = f"{domain}{path}"
 
+    @web.middleware
+    async def request_logging_middleware(request: web.Request, handler):
+        logger.info("Incoming HTTP %s %s", request.method, request.path)
+        try:
+            response = await handler(request)
+            logger.info(
+                "Completed HTTP %s %s with status=%s",
+                request.method,
+                request.path,
+                response.status,
+            )
+            return response
+        except Exception:
+            logger.exception(
+                "Unhandled HTTP exception for %s %s",
+                request.method,
+                request.path,
+            )
+            raise
+
+    app.middlewares.append(request_logging_middleware)
+
     async def on_startup(bot: Bot) -> None:
         logger.info("Setting Telegram webhook to %s", webhook_url)
         await bot.set_webhook(webhook_url)
