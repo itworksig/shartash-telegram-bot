@@ -94,7 +94,7 @@ async def objects_menu_handler(message: Message):
     )
 
 
-@router.message(F.text == "🏛️ Археоло��ическая беседка")
+@router.message(F.text == "🏛️ Археологическая беседка")
 async def archeological_gazebo_handler(message: Message):
     logger.info("Handling '🏛️ Археологическая беседка' for chat_id=%s", message.chat.id)
     await message.answer(archeological_gazebo)
