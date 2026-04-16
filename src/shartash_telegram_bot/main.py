@@ -84,8 +84,11 @@ def run_webhook() -> None:
     app.middlewares.append(request_logging_middleware)
 
     async def on_startup(bot: Bot) -> None:
+        logger.info("Deleting old webhook before re-registering")
+        await bot.delete_webhook(drop_pending_updates=True)
         logger.info("Setting Telegram webhook to %s", webhook_url)
-        await bot.set_webhook(webhook_url, drop_pending_updates=True)
+        result = await bot.set_webhook(webhook_url)
+        logger.info("set_webhook result: %s", result)
 
     async def on_shutdown(bot: Bot) -> None:
         logger.info("Closing bot session")
