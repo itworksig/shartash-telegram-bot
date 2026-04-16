@@ -85,15 +85,19 @@ def run_webhook() -> None:
 
     async def on_startup(bot: Bot) -> None:
         logger.info("Setting Telegram webhook to %s", webhook_url)
-        await bot.set_webhook(webhook_url)
+        await bot.set_webhook(webhook_url, drop_pending_updates=True)
 
     async def on_shutdown(bot: Bot) -> None:
-        logger.info("Deleting Telegram webhook")
-        await bot.delete_webhook()
+        logger.info("Closing bot session")
         await bot.session.close()
 
     dp.startup.register(on_startup)
     dp.shutdown.register(on_shutdown)
+
+    async def health_handler(request: web.Request) -> web.Response:
+        return web.Response(text="ok")
+
+    app.router.add_get("/health", health_handler)
 
     SimpleRequestHandler(dispatcher=dp, bot=bot).register(app, path=path)
     setup_application(app, dp, bot=bot)
